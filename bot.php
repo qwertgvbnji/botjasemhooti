@@ -14,6 +14,15 @@ if(is_numeric($checkSpam)){
     $time = jdate("Y-m-d H:i:s", $checkSpam);
     sendMessage("اکانت شما به دلیل اسپم مسدود شده است\nزمان آزادسازی اکانت شما: \n$time");
     exit();
+	if($text == "/autoconfirm_on" && ($from_id == $admin || $userInfo['isAdmin'] == true)){
+    setSettings('cartToCartAutoAcceptState', 'on');
+    sendMessage("✅ تایید خودکار پرداخت‌ها فعال شد.", null, "MarkDown", $from_id);
+}
+
+if($text == "/autoconfirm_off" && ($from_id == $admin || $userInfo['isAdmin'] == true)){
+    setSettings('cartToCartAutoAcceptState', 'off');
+    sendMessage("❌ تایید خودکار پرداخت‌ها غیرفعال شد.", null, "MarkDown", $from_id);
+}
 }
 if(preg_match("/^haveJoined(.*)/",$data,$match)){
     if ($joniedState== "kicked" || $joniedState== "left"){
@@ -22,7 +31,19 @@ if(preg_match("/^haveJoined(.*)/",$data,$match)){
     }else{
         delMessage();
         $text = $match[1];
+ 
+ }
+// اجرای تابع هر 60 ثانیه
+while(true){
+    if(isset($botState['cartToCartAutoAcceptState']) && $botState['cartToCartAutoAcceptState'] == "on"){
+        autoConfirmCartToCart();
     }
+    sleep(60); // منتظر 60 ثانیه بمان
+}	
+	if($text == "/check_payments" && ($from_id == $admin || $userInfo['isAdmin'] == true)){
+    autoConfirmCartToCart();
+    sendMessage("✅ پرداخت‌های در انتظار بررسی شدند.", null, "MarkDown", $from_id);
+}
 }
 if (($joniedState== "kicked" || $joniedState== "left") && $from_id != $admin){
     sendMessage(str_replace("CHANNEL-ID", $channelLock, $mainValues['join_channel_message']), json_encode(['inline_keyboard'=>[
