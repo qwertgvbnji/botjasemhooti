@@ -7,6 +7,92 @@ $connection = new mysqli('localhost',$dbUserName,$dbPassword,$dbName);
 if($connection->connect_error){
     exit("error " . $connection->connect_error);  
 }
+}
+$connection->set_charset("utf8mb4");
+
+// تابع جدید برای تایید خودکار پرداخت‌ها
+function autoConfirmCartToCart() {
+    global $connection;
+    
+    // زمان فعلی منهای 1 دقیقه
+    $timeLimit = time() - 60;
+    
+    // دریافت پرداخت‌های در انتظار قدیمی
+    $stmt = $connection->prepare("SELECT * FROM pays WHERE state='pending' AND request_date <= ?");
+    $stmt->bind_param("i", $timeLimit);
+    $stmt->execute();
+    $pendingPayments = $stmt->get_result();
+    
+    while($payment = $pendingPayments->fetch_assoc()){
+        // تایید پرداخت
+        $stmtUpdate = $connection->prepare("UPDATE pays SET state='approved' WHERE id=?");
+        $stmtUpdate->bind_param("i", $payment['id']);
+        $stmtUpdate->execute();
+        
+        // افزایش کیف پول کاربر
+        $stmtWallet = $connection->prepare("UPDATE users SET wallet = wallet + ? WHERE userid=?");
+        $stmtWallet->bind_param("di", $payment['amount'], $payment['userid']);
+        $stmtWallet->execute();
+        
+        // ارسال پیام به کاربر
+        sendMessage("✅ پرداخت شما به مبلغ " . number_format($payment['amount']) . " تومان خودکار تایید شد.", null, "MarkDown", $payment['userid']);
+    }
+}
+
+// تابع setSettings با افزودن تنظیمات تایمر خودکار
+function setSettings($field, $value){
+    global $connection, $botState;
+    $botState[$field]= $value;
+    
+    // اضافه کردن تنظیمات تایمر خودکار
+    if($field == 'cartToCartAutoAcceptState'){
+        $botState['cartToCartAutoAcceptTime'] = 60; // تایمر 1 دقیقه‌ای
+    }
+    
+    $stmt = $connection->prepare("SELECT * FROM `setting` WHERE `type` = 'BOT_STATES'");
+    $stmt->execute();
+    $isExists = $stmt->get_result();
+    $stmt->close();
+    if($isExists->num_rows>0) $query = "UPDATE `setting` SET `value` = ? WHERE `type` = 'BOT_STATES'";
+    else $query = "INSERT INTO `setting` (`type`, `value`) VALUES ('BOT_STATES', ?)";
+    $newData = json_encode($botState);
+    
+    $stmt = $connection->prepare($query);
+    $stmt->bind_param("s", $newData);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// تابع getBotSettingKeys با افزودن گزینه مدیریت تایمر
+function getBotSettingKeys(){
+    global $connection, $mainValues, $buttonValues;
+    
+    $stmt = $connection->prepare("SELECT * FROM `setting` WHERE `type` = 'BOT_STATES'");
+    $stmt->execute();
+    $botState = $stmt->get_result()->fetch_assoc()['value'];
+    if(!is_null($botState)) $botState = json_decode($botState,true);
+    else $botState = array();
+    $stmt->close();
+
+    $cartToCartAutoAcceptTime = ($botState['cartToCartAutoAcceptTime'] ?? 60) . " ثانیه"; // مقدار پیش‌فرض 60 ثانیه
+    
+    return json_encode(['inline_keyboard'=>[
+        // ... کدهای قبلی
+        [
+            ['text'=>$cartToCartAutoAcceptTime,'callback_data'=>"editcartToCartAutoAcceptTime"],
+            ['text'=>"⏰ زمان تایید خودکار",'callback_data'=>"wizwizch"]
+        ],
+        [['text'=>$buttonValues['back_button'],'callback_data'=>"managePanel"]]
+    ]]);
+}
+
+// بقیه توابع و کدهای شما
+// ...
+
+// اجرای تابع تایید خودکار در صورت فعال بودن
+if(isset($botState['cartToCartAutoAcceptState']) && $botState['cartToCartAutoAcceptState'] == "on"){
+    autoConfirmCartToCart();
+}
 $connection->set_charset("utf8mb4");
 
 function bot($method, $datas = []){
