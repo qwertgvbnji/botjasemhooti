@@ -717,7 +717,7 @@ function getServerConfigKeys($serverId,$offset = 0){
             ],
         [['text' => $buttonValues['back_button'], 'callback_data' => "nextServerPage" . $offset]]
         ])]);
-}11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+}
 function getServerListKeys($offset = 0){
     global $connection, $mainValues, $buttonValues;
     
@@ -968,103 +968,134 @@ function getBotSettingKeys(){
         default:
             $remarkType = "آیدی و عدد رندوم";
             break;
-    }function updateCartToCartAutoAccept($transactionId, $userId) {
-    global $connection, $botState, $paymentKeys;
-
-    // بررسی وضعیت تایید خودکار کارت به کارت
-    if ($botState['cartToCartAutoAcceptState'] == "on") {
-        // زمان تایید خودکار (در اینجا 1 دقیقه)
-        $autoAcceptTime = isset($botState['cartToCartAutoAcceptTime']) ? $botState['cartToCartAutoAcceptTime'] * 60 : 60;
-
-        // گرفتن زمان ایجاد تراکنش
-        $stmt = $connection->prepare("SELECT `timestamp` FROM `transactions` WHERE `id` = ? AND `user_id` = ?");
-        $stmt->bind_param("ii", $transactionId, $userId);
-        $stmt->execute();
-        $transaction = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        $transactionTimestamp = strtotime($transaction['timestamp']);
-        $currentTime = time();
-
-        // اگر زمان سپری شده بیشتر از زمان خودکار باشد
-        if (($currentTime - $transactionTimestamp) >= $autoAcceptTime) {
-            // تایید خودکار پرداخت
-            $stmt = $connection->prepare("UPDATE `transactions` SET `status` = 'approved' WHERE `id` = ? AND `user_id` = ?");
-            $stmt->bind_param("ii", $transactionId, $userId);
-            $stmt->execute();
-            $stmt->close();
-
-            // ارسال پیام تایید خودکار به کاربر
-            sendAutoApprovalMessage($transactionId, $userId);
-        }
     }
-}
-
-function sendAutoApprovalMessage($transactionId, $userId) {
-    // اینجا می‌توانید پیام تایید خودکار را ارسال کنید
-    // فرض بر این است که تابع ارسال پیام با نام sendMessage وجود دارد
-    $message = "پرداخت شما تایید شد. تراکنش شماره: $transactionId";
-    sendMessage($userId, $message);
-}
-
-function sendMessage($userId, $message) {
-    // کد ارسال پیام به کاربر با توجه به سیستم ربات شما
-    // مثلا در اینجا فرض کنید از توابع خاص ربات استفاده می‌کنید
-    // پیام ارسال شده به کاربر در اینجا
-    echo "Message to user $userId: $message";
-}
-
-function getPanelSettings() {
-    global $connection, $buttonValues, $botState;
-
+    
     $stmt = $connection->prepare("SELECT * FROM `setting` WHERE `type` = 'PAYMENT_KEYS'");
     $stmt->execute();
     $paymentKeys = $stmt->get_result()->fetch_assoc()['value'];
-    if (!is_null($paymentKeys)) $paymentKeys = json_decode($paymentKeys, true);
+    if(!is_null($paymentKeys)) $paymentKeys = json_decode($paymentKeys,true);
     else $paymentKeys = array();
     $stmt->close();
-
-    return json_encode([
-        'inline_keyboard' => [
-            [
-                ['text' => "🎗 بنر بازاریابی 🎗", 'callback_data' => "inviteSetting"]
+    return json_encode(['inline_keyboard'=>[
+        [
+            ['text'=>"🎗 بنر بازاریابی 🎗",'callback_data'=>"inviteSetting"]
             ],
-            [
-                ['text' => $botState['cartToCartAutoAcceptState'] == "on" ? $buttonValues['on'] : $buttonValues['off'], 'callback_data' => "changeBotcartToCartAutoAcceptState"],
-                ['text' => "تأیید خودکار کارت به کارت", 'callback_data' => "wizwizch"]
+        [
+            ['text'=> $updateConnectionState,'callback_data'=>"changeUpdateConfigLinkState"],
+            ['text'=>"آپدیت کانفیگ",'callback_data'=>"wizwizch"]
             ],
-            ($botState['cartToCartAutoAcceptState'] == "on" ? [
-                ['text' => ($botState['cartToCartAutoAcceptType'] == "0" ? "نماینده" : ($botState['cartToCartAutoAcceptType'] == "1" ? "کاربر" : "همه")), 'callback_data' => "changeBotcartToCartAutoAcceptType"],
-                ['text' => "نوع تأیید", 'callback_data' => "wizwizch"]
-            ] : []),
-            ($botState['cartToCartAutoAcceptState'] == "on" ? [
-                ['text' => ($botState['cartToCartAutoAcceptTime'] ?? "10") . " دقیقه", 'callback_data' => "editcartToCartAutoAcceptTime"],
-                ['text' => "زمان تأیید خودکار ", 'callback_data' => "wizwizch"]
-            ] : []),
-            [
-                ['text' => $buttonValues['back_button'], 'callback_data' => "managePanel"]
-            ]
-        ]
-    ]);
+        [
+            ['text'=> $agency,'callback_data'=>"changeBotagencyState"],
+            ['text'=>"نمایندگی",'callback_data'=>"wizwizch"]
+            ],
+        [
+            ['text'=> $agencyPlanDiscount,'callback_data'=>"changeBotagencyPlanDiscount"],
+            ['text'=>"نوع تخفیف نمایندگی",'callback_data'=>"wizwizch"]
+            ],
+        [
+            ['text'=>$individualExistence,'callback_data'=>"changeBotindividualExistence"],
+            ['text'=>"موجودی اختصاصی",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$sharedExistence,'callback_data'=>"changeBotsharedExistence"],
+            ['text'=>"موجودی اشتراکی",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$testAccount,'callback_data'=>"changeBottestAccount"],
+            ['text'=>"اکانت تست",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$changeProtocole,'callback_data'=>"changeBotchangeProtocolState"],
+            ['text'=>"تغییر پروتکل",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$renewAccount,'callback_data'=>"changeBotrenewAccountState"],
+            ['text'=>"تمدید سرویس",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$plandelkhahwiz,'callback_data'=>"changeBotplandelkhahState"],
+            ['text'=>"پلن دلخواه",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$switchLocation,'callback_data'=>"changeBotswitchLocationState"],
+            ['text'=>"تغییر لوکیشن",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$increaseTime,'callback_data'=>"changeBotincreaseTimeState"],
+            ['text'=>"افزایش زمان",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$increaseVolume,'callback_data'=>"changeBotincreaseVolumeState"],
+            ['text'=>"افزایش حجم",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$requirePhone,'callback_data'=>"changeBotrequirePhone"],
+            ['text'=>"تأیید شماره",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$requireIranPhone,'callback_data'=>"changeBotrequireIranPhone"],
+            ['text'=>"تأیید شماره ایرانی",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$sellState,'callback_data'=>"changeBotsellState"],
+            ['text'=>"فروش",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$robotState,'callback_data'=>"changeBotbotState"],
+            ['text'=>"وضعیت ربات",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$subLink,'callback_data'=>"changeBotsubLinkState"],
+            ['text'=>"لینک ساب و مشخصات وب",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$configLink,'callback_data'=>"changeBotconfigLinkState"],
+            ['text'=>"لینک کانفیگ",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$searchState,'callback_data'=>"changeBotsearchState"],
+            ['text'=>"مشخصات کانفیگ",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$renewConfigLink,'callback_data'=>"changeBotrenewConfigLinkState"],
+            ['text'=>"دریافت لینک جدید",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$updateConfigLink,'callback_data'=>"changeBotupdateConfigLinkState"],
+            ['text'=>"بروز رسانی لینک",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$qrConfig,'callback_data'=>"changeBotqrConfigState"],
+            ['text'=>"کیو آر کد کانفیگ",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$qrSub,'callback_data'=>"changeBotqrSubState"],
+            ['text'=>"کیو آر کد ساب",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$remarkType,'callback_data'=>"changeConfigRemarkType"],
+            ['text'=>"نوع ریمارک",'callback_data'=>"wizwizch"]
+        ],
+        [
+            ['text'=>$rewaredTime,'callback_data'=>'editRewaredTime'],
+            ['text'=>"ارسال گزارش درآمد", 'callback_data'=>'wizwizch']
+            ],
+        [
+            ['text'=>$botState['cartToCartAutoAcceptState']=="on"?$buttonValues['on']:$buttonValues['off'],'callback_data'=>"changeBotcartToCartAutoAcceptState"],
+            ['text'=>"تأیید خودکار کارت به کارت",'callback_data'=>"wizwizch"]
+        ],
+        ($botState['cartToCartAutoAcceptState']=="on"?[
+            ['text'=>($botState['cartToCartAutoAcceptType'] == "0"?"نماینده":($botState['cartToCartAutoAcceptType'] == "1"?"کاربر":"همه")),'callback_data'=>"changeBotcartToCartAutoAcceptType"],
+            ['text'=>"نوع تأیید",'callback_data'=>"wizwizch"]
+        ]:[]),
+        ($botState['cartToCartAutoAcceptState']=="on"?[
+            ['text'=>($botState['cartToCartAutoAcceptTime']??"10") . " دقیقه",'callback_data'=>"editcartToCartAutoAcceptTime"],
+            ['text'=>"زمان تأیید خودکار ",'callback_data'=>"wizwizch"]
+        ]:[]),
+        [['text'=>$buttonValues['back_button'],'callback_data'=>"managePanel"]]
+        ]]);
+
 }
-
-// عملکرد برای انجام تایید خودکار اگر تایید ادمین انجام نشده باشد
-function autoApproveTransaction($transactionId, $userId) {
-    global $connection;
-
-    // بررسی اینکه آیا ادمین تایید کرده یا نه
-    $stmt = $connection->prepare("SELECT `admin_approval` FROM `transactions` WHERE `id` = ? AND `user_id` = ?");
-    $stmt->bind_param("ii", $transactionId, $userId);
-    $stmt->execute();
-    $transaction = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    // اگر ادمین تایید نکرده باشد، تایید خودکار انجام شود
-    if ($transaction['admin_approval'] != 'approved') {
-        updateCartToCartAutoAccept($transactionId, $userId);
-    }
-}
-
 function getBotReportKeys(){
     global $connection, $mainValues, $buttonValues;
     $stmt = $connection->prepare("SELECT * FROM `users`");
