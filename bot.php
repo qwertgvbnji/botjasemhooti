@@ -9,6 +9,41 @@ if ($userInfo['step'] == "banned" && $from_id != $admin && $userInfo['isAdmin'] 
     sendMessage($mainValues['banned']);
     exit();
 }
+if ($text == "/start") {
+    send_start_buttons($chat_id);
+}
+function send_start_buttons($chat_id) {
+    $keyboard = [
+        "inline_keyboard" => [
+            [["text" => "🎮 شروع بازی", "callback_data" => "start_game"]]
+        ]
+    ];
+
+    send_message($chat_id, "🤖 خوش آمدید! برای شروع بازی دکمه زیر را بزنید!", $keyboard);
+}
+function send_message($chat_id, $text, $keyboard = null) {
+    $url = API_URL . "sendMessage";
+    $data = [
+        "chat_id" => $chat_id,
+        "text" => $text,
+        "parse_mode" => "Markdown"
+    ];
+
+    if ($keyboard) {
+        $data["reply_markup"] = json_encode($keyboard);
+    }
+
+    file_get_contents($url . "?" . http_build_query($data));
+}
+if (isset($update["callback_query"])) {
+    $callback_query = $update["callback_query"];
+    $callback_data = $callback_query["data"];
+    $callback_chat_id = $callback_query["message"]["chat"]["id"];
+
+    if ($callback_data == "start_game") {
+        send_message($callback_chat_id, "👥 لطفاً دو بازیکن را مشخص کنید. مثال:\n`/startgame 123456789 987654321`");
+    }
+}
 require 'game.php'; // اطمینان از اینکه فایل game.php لود شده است
 
 $update = json_decode(file_get_contents("php://input"), true);
