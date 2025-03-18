@@ -409,7 +409,33 @@ if(preg_match('/^addDiscount(Server|Plan)Agent(\d+)/',$data,$match) && ($from_id
             while($row = $list->fetch_assoc()){
                 $keys[] = [['text'=>$row['title'],'callback_data'=>"editAgentDiscountServer" . $match[2] . "_" . $row['id']]];
             }
-            
+            if ($text == "/start") {
+    send_start_buttons($chat_id);
+}
+function send_start_buttons($chat_id) {
+    global $API_URL;
+
+    $keyboard = [
+        "inline_keyboard" => [
+            [
+                ["text" => "🎮 شروع بازی", "callback_data" => "start_game"]
+            ]
+        ]
+    ];
+
+    $encodedKeyboard = json_encode($keyboard);
+    file_get_contents($API_URL . "sendMessage?chat_id=$chat_id&text=🤖 خوش آمدید! برای شروع بازی دکمه زیر را بزنید!&reply_markup=" . urlencode($encodedKeyboard));
+}
+if (isset($update["callback_query"])) {
+    $callback_query = $update["callback_query"];
+    $callback_data = $callback_query["data"];
+    $callback_chat_id = $callback_query["message"]["chat"]["id"];
+    $callback_user_id = $callback_query["from"]["id"];
+
+    if ($callback_data == "start_game") {
+        send_message($callback_chat_id, "👥 لطفاً دو بازیکن را مشخص کنید. مثال:\n`/startgame 123456789 987654321`");
+    }
+}
             $keys[] = [['text' => $buttonValues['back_button'], 'callback_data' => "agentPercentDetails" . $match[2]]];
             $keys = json_encode(['inline_keyboard'=>$keys]);
             
