@@ -44,6 +44,61 @@ if ($message) {
         send_message($chat_id, "📌 **دستورات بازی:**\n\n/startgame user1 user2 - شروع بازی بین دو نفر\n/choose عدد - انتخاب عدد توسط بازیکن اول\n/guess عدد - حدس زدن عدد توسط بازیکن دوم");
     }
 }
+require 'config.php';
+
+$update = json_decode(file_get_contents("php://input"), true);
+$message = $update["message"] ?? null;
+$callback_query = $update["callback_query"] ?? null;
+
+if ($message) {
+    $chat_id = $message["chat"]["id"];
+    $text = $message["text"];
+    
+    if ($text == "/start") {
+        send_start_buttons($chat_id);
+    }
+}
+
+if ($callback_query) {
+    $callback_data = $callback_query["data"];
+    $callback_chat_id = $callback_query["message"]["chat"]["id"];
+
+    if ($callback_data == "start_game") {
+        send_message($callback_chat_id, "👥 لطفاً دو بازیکن را مشخص کنید. مثال:\n`/startgame 123456789 987654321`");
+    }
+}
+
+// تابع برای ارسال دکمه‌ها
+function send_start_buttons($chat_id) {
+    $keyboard = [
+        "inline_keyboard" => [
+            [["text" => "🎮 شروع بازی", "callback_data" => "start_game"]]
+        ]
+    ];
+
+    send_message($chat_id, "🤖 خوش آمدید! برای شروع بازی دکمه زیر را بزنید!", $keyboard);
+}
+
+// تابع برای ارسال پیام به تلگرام
+function send_message($chat_id, $text, $keyboard = null) {
+    $url = API_URL . "sendMessage";
+    $data = ["chat_id" => $chat_id, "text" => $text, "parse_mode" => "Markdown"];
+
+    if ($keyboard) {
+        $data["reply_markup"] = json_encode($keyboard);
+    }
+
+    $options = [
+        "http" => [
+            "header"  => "Content-Type: application/json",
+            "method"  => "POST",
+            "content" => json_encode($data)
+        ]
+    ];
+
+    $context = stream_context_create($options);
+    file_get_contents($url, false, $context);
+}
 
 function send_message($chat_id, $text) {
     global $API_URL;
