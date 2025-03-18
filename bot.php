@@ -3,7 +3,7 @@ include_once 'config.php';
 check();
 require 'config.php';
 $robotState = $botState['botState']??"on";
-
+require 'game.php';
 GOTOSTART:
 if ($userInfo['step'] == "banned" && $from_id != $admin && $userInfo['isAdmin'] != true) {
     sendMessage($mainValues['banned']);
