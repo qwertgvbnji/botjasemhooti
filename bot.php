@@ -9,6 +9,46 @@ if ($userInfo['step'] == "banned" && $from_id != $admin && $userInfo['isAdmin'] 
     sendMessage($mainValues['banned']);
     exit();
 }
+require 'game.php'; // اطمینان از اینکه فایل game.php لود شده است
+
+$update = json_decode(file_get_contents("php://input"), true);
+$message = $update["message"] ?? null;
+
+if ($message) {
+    $chat_id = $message["chat"]["id"];
+    $text = $message["text"];
+    $user_id = $message["from"]["id"];
+
+    if (strpos($text, "/startgame") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 3) {
+            send_message($chat_id, "❌ لطفاً دو بازیکن را مشخص کنید: `/startgame user1 user2`");
+        } else {
+            send_message($chat_id, start_game($parts[1], $parts[2]));
+        }
+    } elseif (strpos($text, "/choose") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/choose 42`");
+        } else {
+            send_message($chat_id, choose_number($user_id, intval($parts[1])));
+        }
+    } elseif (strpos($text, "/guess") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/guess 50`");
+        } else {
+            send_message($chat_id, guess_number($user_id, intval($parts[1])));
+        }
+    } else {
+        send_message($chat_id, "📌 **دستورات بازی:**\n\n/startgame user1 user2 - شروع بازی بین دو نفر\n/choose عدد - انتخاب عدد توسط بازیکن اول\n/guess عدد - حدس زدن عدد توسط بازیکن دوم");
+    }
+}
+
+function send_message($chat_id, $text) {
+    global $API_URL;
+    file_get_contents($API_URL . "sendMessage?chat_id=$chat_id&text=" . urlencode($text));
+}
 $checkSpam = checkSpam();
 if(is_numeric($checkSpam)){
     $time = jdate("Y-m-d H:i:s", $checkSpam);
