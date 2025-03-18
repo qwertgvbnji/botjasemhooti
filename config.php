@@ -131,6 +131,52 @@ function editKeys($keys = null, $msgId = null, $ci = null){
 		'reply_markup' => $keys
     ]);
 }
+<?php
+require 'game.php';
+
+$TOKEN = "YOUR_BOT_TOKEN";
+$API_URL = "https://api.telegram.org/bot$TOKEN/";
+
+$update = json_decode(file_get_contents("php://input"), true);
+$message = $update["message"] ?? null;
+
+if ($message) {
+    $chat_id = $message["chat"]["id"];
+    $text = $message["text"];
+    $user_id = $message["from"]["id"];
+
+    if (strpos($text, "/startgame") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 3) {
+            send_message($chat_id, "❌ لطفاً دو بازیکن را مشخص کنید: `/startgame user1 user2`");
+        } else {
+            send_message($chat_id, start_game($parts[1], $parts[2]));
+        }
+    } elseif (strpos($text, "/choose") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/choose 42`");
+        } else {
+            send_message($chat_id, choose_number($user_id, intval($parts[1])));
+        }
+    } elseif (strpos($text, "/guess") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/guess 50`");
+        } else {
+            send_message($chat_id, guess_number($user_id, intval($parts[1])));
+        }
+    } else {
+        send_message($chat_id, "دستورات:\n/startgame user1 user2\n/choose عدد\n/guess عدد");
+    }
+}
+
+function send_message($chat_id, $text) {
+    global $API_URL;
+    file_get_contents($API_URL . "sendMessage?chat_id=$chat_id&text=" . urlencode($text));
+}
+?>
+
 function editText($msgId, $txt, $key = null, $parse = null, $ci = null){
     global $from_id;
     $ci = $ci??$from_id;
@@ -227,6 +273,73 @@ function curl_get_file_contents($URL){
 
     if ($contents) return $contents;
     else return FALSE;
+}
+require 'game.php'; // اطمینان از اینکه فایل game.php لود شده است
+
+$update = json_decode(file_get_contents("php://input"), true);
+$message = $update["message"] ?? null;
+
+if ($message) {
+    $chat_id = $message["chat"]["id"];
+    $text = $message["text"];
+    $user_id = $message["from"]["id"];
+
+    if (strpos($text, "/startgame") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 3) {
+            send_message($chat_id, "❌ لطفاً دو بازیکن را مشخص کنید: `/startgame user1 user2`");
+        } else {
+            send_message($chat_id, start_game($parts[1], $parts[2]));
+        }
+    } elseif (strpos($text, "/choose") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/choose 42`");
+        } else {
+            send_message($chat_id, choose_number($user_id, intval($parts[1])));
+        }
+    } elseif (strpos($text, "/guess") === 0) {
+        $parts = explode(" ", $text);
+        if (count($parts) < 2) {
+            send_message($chat_id, "❌ لطفاً یک عدد ارسال کنید: `/guess 50`");
+        } else {
+            send_message($chat_id, guess_number($user_id, intval($parts[1])));
+        }
+    } else {
+        send_message($chat_id, "📌 **دستورات بازی:**\n\n/startgame user1 user2 - شروع بازی بین دو نفر\n/choose عدد - انتخاب عدد توسط بازیکن اول\n/guess عدد - حدس زدن عدد توسط بازیکن دوم");
+    }
+}
+
+function send_message($chat_id, $text) {
+    global $API_URL;
+    file_get_contents($API_URL . "sendMessage?chat_id=$chat_id&text=" . urlencode($text));
+}
+if ($text == "/start") {
+    send_start_buttons($chat_id);
+}
+function send_start_buttons($chat_id) {
+    global $API_URL;
+
+    $keyboard = [
+        "inline_keyboard" => [
+            [
+                ["text" => "🎮 شروع بازی", "callback_data" => "start_game"]
+            ]
+        ]
+    ];
+
+    $encodedKeyboard = json_encode($keyboard);
+    file_get_contents($API_URL . "sendMessage?chat_id=$chat_id&text=🤖 خوش آمدید! برای شروع بازی دکمه زیر را بزنید!&reply_markup=" . urlencode($encodedKeyboard));
+}
+if (isset($update["callback_query"])) {
+    $callback_query = $update["callback_query"];
+    $callback_data = $callback_query["data"];
+    $callback_chat_id = $callback_query["message"]["chat"]["id"];
+    $callback_user_id = $callback_query["from"]["id"];
+
+    if ($callback_data == "start_game") {
+        send_message($callback_chat_id, "👥 لطفاً دو بازیکن را مشخص کنید. مثال:\n`/startgame 123456789 987654321`");
+    }
 }
 
 function ip_in_range($ip, $range){
