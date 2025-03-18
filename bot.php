@@ -1,7 +1,7 @@
 <?php
 include_once 'config.php';
 check();
-
+require 'config.php';
 $robotState = $botState['botState']??"on";
 
 GOTOSTART:
